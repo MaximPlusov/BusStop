@@ -12,18 +12,29 @@ public class BusStop {
                 set1.add(r);
             }
         }
-        TreeSet<Record> set2 = new TreeSet(new RecordComparator2());
+        ArrayList<Record> list = new ArrayList(set1.size());
         while(!set1.isEmpty()){
-            set2.add(set1.pollFirst());
+            Record r = set1.pollFirst();
+            boolean flag = false;
+            for(int j = 0; j < list.size(); j++){
+                if(list.get(j).better(r)){
+                    flag = true;
+                    break;
+                }
+            }
+            if(!flag){
+                list.add(r);
+            }
         }
+        Collections.sort(list,new RecordComparator2());
         PrintWriter out = new PrintWriter(new FileWriter("output.txt"));
-        for(Record r : set2){
+        for(Record r : list){
             if(r.company.equals("Posh")){
                 out.println(r);
             }
         }
         out.println();
-        for(Record r : set2){
+        for(Record r : list){
             if(r.company.equals("Grotty")){
                 out.println(r);
             }
@@ -33,18 +44,17 @@ public class BusStop {
 }
 
 class Time {
-    int hour;
-    int minute;
+    private int hour;
+    private int minute;
+    int inMinute;
     Time(String s){
         hour = new Integer(s.substring(0,2));
         minute = new Integer(s.substring(3,5));
+        inMinute = hour * 60 + minute;
     }
     @Override
     public String toString(){
         return String.format("%02d", hour) + ":" + String.format("%02d", minute);
-    }
-    int inMinute(){
-        return hour * 60 + minute;
     }
 }
 
@@ -52,43 +62,45 @@ class Record {
     Time first;
     Time second;
     String company;
-    int time(){
-        return second.inMinute() - first.inMinute();
-    }
+    int time;
     Record(String s){
         StringTokenizer st = new StringTokenizer(s);
         company = st.nextToken();
         first = new Time(st.nextToken());
         second = new Time(st.nextToken());
-        if(second.inMinute() < first.inMinute()){
-            second.hour += 24;
+        time = second.inMinute - first.inMinute;
+        if(time < 0){
+            time += 24 * 60;
         }
     }
     public boolean correct(){
-        return time() <= 60;
+        return time <= 60;
     }
     @Override
     public String toString(){
-        String s;
-        if(second.hour < 24){
-            s  = company + " " + first + " " + second;
-        }
-        else{
-            second.hour -= 24;
-            s  = company + " " + first + " " + second;
-            second.hour += 24;
-        }
-        return s;
+        return company + " " + first + " " + second;
     }
     public boolean better(Record record){
-        if(time() == record.time() && first.inMinute() == record.first.inMinute()){
+        if(time == record.time && first.inMinute == record.first.inMinute){
             if(company.equals(record.company)){
                 return true;
             }
             return record.company.equals("Grotty");
         }
-        if(time() < record.time() && second.inMinute() <= record.second.inMinute() && first.inMinute() >= record.first.inMinute()){
-            return true;
+        boolean n1 = second.inMinute >= first.inMinute;
+        boolean n2 = record.second.inMinute >= record.first.inMinute;
+        if((n1 && n2) || (!n1 && !n2)){
+            if(time < record.time && first.inMinute >= record.first.inMinute && second.inMinute <= record.second.inMinute){
+                return true;
+            }
+        }
+        else if(n1 && !n2){
+            if(time < record.time && first.inMinute >= record.first.inMinute){
+                return true;
+            }
+            if(time < record.time && second.inMinute <= record.second.inMinute){
+                return true;
+            }
         }
         return false;
     }
@@ -102,12 +114,12 @@ class RecordComparator1 implements Comparator {
         if(r2.better(r1)){
             return 0;
         }
-        int time = r1.time() - r2.time();
+        int time = r1.time - r2.time;
         if(time == 0){
-            if(r1.first.inMinute() == r2.first.inMinute()){
+            if(r1.first.inMinute == r2.first.inMinute){
                 return -1;
             }
-            return r1.first.inMinute() - r2.first.inMinute();
+            return r1.first.inMinute - r2.first.inMinute;
         }
         return time;
     }
@@ -118,22 +130,6 @@ class RecordComparator2 implements Comparator{
     public int compare(Object o1, Object o2) {
         Record r1 = (Record)o1;
         Record r2 = (Record)o2;
-        if(r2.better(r1)){
-            return 0;
-        }
-        int time = r1.first.inMinute() - r2.first.inMinute();
-        if(time == 0){
-            if(r1.second.equals(r2.second)){
-                if(r1.company.equals(r2.company)){
-                    return 0;
-                }
-                if(r1.company.equals("Posh")){
-                    return 1;
-                }
-                return -1;
-            }
-            return -1;
-        }
-        return time;
+        return r1.first.inMinute - r2.first.inMinute;
     }
 }
